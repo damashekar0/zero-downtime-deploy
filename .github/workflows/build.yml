@@ -17,7 +17,7 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: arn:aws:iam::859340969581:role/github-actions-ecr
           aws-region: ap-south-1
 
       - id: ecr
