@@ -1,0 +1,7 @@
+install.yaml
+__pycache__/
+*.pyc
+.env
+*.pem
+*.key
+.aws/
