@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: load
+spec:
+  containers:
+  - name: load
+    image: demo-app:v1
+    imagePullPolicy: IfNotPresent
+    command: ["python", "-c"]
+    args:
+    - |
+      import time, urllib.request
+      while True:
+          try:
+              urllib.request.urlopen("http://demo-app/", timeout=2).read()
+          except Exception:
+              pass
+          time.sleep(0.1)

@@ -11,6 +11,10 @@ spec:
     metadata:
       labels:
         app: demo-app
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: demo-app
@@ -18,9 +22,6 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
-        env:
-        - name: VERSION
-          value: v1
         readinessProbe:
           httpGet:
             path: /health
@@ -30,7 +31,13 @@ spec:
     canary:
       steps:
       - setWeight: 20
-      - pause: {duration: 30s}
+      - analysis:
+          templates:
+          - templateName: success-rate
+          args:
+          - name: canary-hash
+            valueFrom:
+              podTemplateHashValue: Latest
       - setWeight: 50
       - pause: {duration: 30s}
       - setWeight: 100

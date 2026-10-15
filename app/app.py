@@ -1,6 +1,6 @@
 import os, random
-from flask import Flask
-from prometheus_client import Counter, generate_latest
+from flask import Flask, Response
+from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST
 
 app = Flask(__name__)
 VERSION = os.getenv("VERSION", "v1")
@@ -21,6 +21,6 @@ def health():
 
 @app.route("/metrics")
 def metrics():
-    return generate_latest()
+    return Response(generate_latest(), content_type=CONTENT_TYPE_LATEST)
 
 app.run(host="0.0.0.0", port=8080)
