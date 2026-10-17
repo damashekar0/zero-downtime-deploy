@@ -58,5 +58,4 @@ The cluster is created for the test and deleted afterwards. The local kind clust
 
 ## Result
 
-A deliberately bad release (50% errors) was detected through Prometheus metrics and rolled back automatically in about 38 seconds, with only 1 of 5 pods ever running the bad version.
-
+A deliberately bad release (50% errors) was detected through Prometheus metrics and rolled back automatically in 38 to 51 seconds (two runs), with only 1 of 5 pods ever running the bad version.
