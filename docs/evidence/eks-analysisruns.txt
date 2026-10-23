@@ -1,0 +1,5 @@
+﻿NAME                      STATUS       AGE
+demo-app-58665f9664-3-1   Successful   64m
+demo-app-8c4b848bc-10-1   Failed       5m20s
+demo-app-8c4b848bc-6-1    Failed       46m
+demo-app-8c4b848bc-8-1    Failed       41m

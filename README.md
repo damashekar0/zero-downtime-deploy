@@ -56,6 +56,13 @@ The cluster is created for the test and deleted afterwards. The local kind clust
 - **Argo Rollouts CRD install failed:** the CRDs exceed the annotation size limit, so I used `kubectl apply --server-side`.
 - **OIDC login failed:** I decoded the token's `sub` claim and found GitHub now includes numeric owner and repo IDs. I updated the IAM trust policy to match the exact subject.
 
-## Result
+## Results
 
-A deliberately bad release (50% errors) was detected through Prometheus metrics and rolled back automatically in 38 to 51 seconds (two runs), with only 1 of 5 pods ever running the bad version.
+| Environment | Bad release rollback time | Timed runs |
+|---|---|---|
+| Local kind cluster | 38 to 51 seconds | 2 |
+| Amazon EKS | 33 to 38 seconds | 2 |
+
+In the tests a bad version (50% errors) was detected through Prometheus metrics and rolled back automatically. Only 1 of 5 pods ran the bad version, and the stable ReplicaSet was never replaced.
+
+Evidence: `docs/screenshots` and `docs/evidence`.

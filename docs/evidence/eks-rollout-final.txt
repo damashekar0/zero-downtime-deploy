@@ -1,0 +1,39 @@
+﻿Name:            demo-app
+Namespace:       default
+Status:          Γ£ö Healthy
+Strategy:        Canary
+  Step:          5/5
+  SetWeight:     100
+  ActualWeight:  100
+Images:          ************.dkr.ecr.ap-south-1.amazonaws.com/demo-app:v2 (stable)
+Replicas:
+  Desired:       5
+  Current:       5
+  Updated:       5
+  Ready:         5
+  Available:     5
+
+NAME                                  KIND         STATUS        AGE    INFO
+Γƒ│ demo-app                            Rollout      Γ£ö Healthy     81m    
+Γö£ΓöÇΓöÇ# revision:11                                                        
+Γöé  ΓööΓöÇΓöÇΓºë demo-app-58665f9664           ReplicaSet   Γ£ö Healthy     64m    stable
+Γöé     Γö£ΓöÇΓöÇΓûí demo-app-58665f9664-msxvv  Pod          Γ£ö Running     64m    ready:1/1
+Γöé     Γö£ΓöÇΓöÇΓûí demo-app-58665f9664-jk8sm  Pod          Γ£ö Running     63m    ready:1/1
+Γöé     Γö£ΓöÇΓöÇΓûí demo-app-58665f9664-mbg8r  Pod          Γ£ö Running     63m    ready:1/1
+Γöé     Γö£ΓöÇΓöÇΓûí demo-app-58665f9664-rmgnr  Pod          Γ£ö Running     62m    ready:1/1
+Γöé     ΓööΓöÇΓöÇΓûí demo-app-58665f9664-78p9s  Pod          Γ£ö Running     4m48s  ready:1/1
+Γö£ΓöÇΓöÇ# revision:10                                                        
+Γöé  Γö£ΓöÇΓöÇΓºë demo-app-8c4b848bc            ReplicaSet   ΓÇó ScaledDown  46m    
+Γöé  ΓööΓöÇΓöÇ╬▒ demo-app-8c4b848bc-10-1       AnalysisRun  Γ£û Failed      5m18s  Γ£ö 2,Γ£û 1
+Γö£ΓöÇΓöÇ# revision:8                                                         
+Γöé  ΓööΓöÇΓöÇ╬▒ demo-app-8c4b848bc-8-1        AnalysisRun  Γ£û Failed      41m    Γ£ö 2,Γ£û 1
+Γö£ΓöÇΓöÇ# revision:6                                                         
+Γöé  ΓööΓöÇΓöÇ╬▒ demo-app-8c4b848bc-6-1        AnalysisRun  Γ£û Failed      46m    Γ£ö 2,Γ£û 1
+Γö£ΓöÇΓöÇ# revision:4                                                         
+Γöé  ΓööΓöÇΓöÇΓºë demo-app-8f7bc8f98            ReplicaSet   ΓÇó ScaledDown  58m    
+Γö£ΓöÇΓöÇ# revision:3                                                         
+Γöé  ΓööΓöÇΓöÇ╬▒ demo-app-58665f9664-3-1       AnalysisRun  Γ£ö Successful  64m    Γ£ö 4
+Γö£ΓöÇΓöÇ# revision:2                                                         
+Γöé  ΓööΓöÇΓöÇΓºë demo-app-5dd6cbd745           ReplicaSet   ΓÇó ScaledDown  70m    
+ΓööΓöÇΓöÇ# revision:1                                                         
+   ΓööΓöÇΓöÇΓºë demo-app-7b858c77f5           ReplicaSet   ΓÇó ScaledDown  81m    
