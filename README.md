@@ -66,3 +66,6 @@ The cluster is created for the test and deleted afterwards. The local kind clust
 In the tests a bad version (50% errors) was detected through Prometheus metrics and rolled back automatically. Only 1 of 5 pods ran the bad version, and the stable ReplicaSet was never replaced.
 
 Evidence: `docs/screenshots` and `docs/evidence`.
+## Note on the pipeline
+The GitHub Actions workflow was verified green (run 8, screenshot 12). After the project, the AWS resources were removed to avoid cost, so the workflow is set to manual trigger only.
+
