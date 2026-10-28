@@ -1,71 +1,239 @@
-\# Zero-Downtime Canary Deployment Pipeline
+﻿# ðŸ³ Docker Swarm with Jenkins CI/CD
 
+A complete CI/CD project on AWS: **Jenkins** builds Docker images from GitHub, pushes them to **Docker Hub**, and deploys them as replicated services on a **Docker Swarm** cluster using `docker stack`.
 
+---
 
-Canary and blue-green deployments with Argo Rollouts on Kubernetes,
+## ðŸ“Œ Project Overview
 
-with automated rollback driven by Prometheus metrics.
+| Item | Details |
+|------|---------|
+| Cloud | AWS EC2 (Amazon Linux 2023, Mumbai region) |
+| Cluster | Docker Swarm â€“ 1 Manager + 2 Workers |
+| CI/CD | Jenkins Pipeline (parameterized) |
+| Registry | Docker Hub |
+| Source | GitHub (`Dockerfile` + `docker-compose.yml`) |
+| Apps | InternetBanking, MobileBanking, Insurance, Loans |
 
+## ðŸ”„ Workflow
 
+```
+GitHub  â”€â”€â–º  Jenkins Pipeline  â”€â”€â–º  Docker Build  â”€â”€â–º  Tag  â”€â”€â–º  Push (Docker Hub)  â”€â”€â–º  docker stack deploy (Swarm)
+```
 
-\## Status
+Pipeline stages: **checkout â†’ build â†’ tag â†’ push â†’ deploy**
 
-Work in progress. Day 1 complete: app, Docker images, Rollout manifests, local canary tested.
+## ðŸ–¥ï¸ Infrastructure
 
+| Node | Instance Type | Role |
+|------|---------------|------|
+| Manager | t2.medium | Swarm manager + Jenkins |
+| node1 | t3.micro | Swarm worker |
+| node2 | t3.micro | Swarm worker |
 
+---
 
-\## Structure
+## ðŸš€ Step-by-Step Implementation
 
-\- `app/` sample app with /health, /metrics and a failure switch
+### Step 1: Launch EC2 Instances
+Launch 3 Amazon Linux 2023 instances: `Manager`, `node1`, `node2`. Open the required ports in the Security Group (22, 8080 for Jenkins, 2377/7946/4789 for Swarm, and the app ports).
 
-\- `k8s/` Rollout and Service manifests
+![EC2 Instances](images/01-ec2-instances.png)
 
-\- `docs/screenshots/` evidence of each stage
+### Step 2: Install Docker on All Nodes
+Connect to all 3 machines with MobaXterm, enable **MultiExec** mode and run:
 
+```bash
+sudo -i
+yum install -y docker
+systemctl start docker
+systemctl enable docker
+```
 
+![Docker install using MultiExec](images/02-docker-install-multiexec.png)
 
-\## Evidence
+### Step 3: Set Hostnames
 
-!\[Canary at 50%](docs/screenshots/07-canary-in-progress.png)
+```bash
+hostnamectl set-hostname manager   # on manager
+hostnamectl set-hostname node1     # on worker 1
+hostnamectl set-hostname node2     # on worker 2
+```
 
-!\[Manual abort](docs/screenshots/09-manual-abort.png)
+### Step 4: Initialize Docker Swarm
+On the **Manager**:
 
-## Security (IAM)
+```bash
+docker swarm init
+```
 
-| Identity | Permissions | Why it is safe |
-|---|---|---|
-| `github-actions-ecr` role | Push images to the `demo-app` ECR repository only | GitHub authenticates with a short-lived OIDC token, so no AWS keys are stored in GitHub. The trust policy allows only this repository's `main` branch |
-| `devops-lab` IAM user | AdministratorAccess | Used only from my laptop for this lab. For production I would use narrower permissions |
+Copy the join command it prints and run it on **node1** and **node2**:
 
-ECR image scanning is enabled on push.
+```bash
+docker swarm join --token <SWARM_TOKEN> <MANAGER_PRIVATE_IP>:2377
+```
 
-## Cost estimate (EKS test day)
+![Worker joined the swarm](images/03-worker-joined-swarm.png)
 
-| Item | Approx. cost |
-|---|---|
-| EKS control plane | about $0.10 per hour |
-| 2 x t3.medium worker nodes | about $0.09 per hour |
-| NAT gateway and load balancer | about $0.07 per hour |
-| **Total** | **about $0.25 to $0.30 per hour** |
+Verify on the Manager:
 
-The cluster is created for the test and deleted afterwards. The local kind cluster costs nothing.
+```bash
+docker node ls
+```
 
-## Troubleshooting notes
+### Step 5: Install Jenkins on the Manager
+Jenkins is installed using a shell script (Java 17, Maven, Git and Jenkins).
 
-- **Prometheus target DOWN:** Flask's `/metrics` was sent as `text/html`, which newer Prometheus rejects. Fixed by returning `CONTENT_TYPE_LATEST`.
-- **Argo Rollouts CRD install failed:** the CRDs exceed the annotation size limit, so I used `kubectl apply --server-side`.
-- **OIDC login failed:** I decoded the token's `sub` claim and found GitHub now includes numeric owner and repo IDs. I updated the IAM trust policy to match the exact subject.
+```bash
+vi jen.sh        # paste the script
+sh jen.sh
+```
 
-## Results
+Open `http://<MANAGER_PUBLIC_IP>:8080`, unlock Jenkins and install the suggested plugins.
 
-| Environment | Bad release rollback time | Timed runs |
-|---|---|---|
-| Local kind cluster | 38 to 51 seconds | 2 |
-| Amazon EKS | 33 to 38 seconds | 2 |
+![Jenkins installation](images/04-jenkins-install.png)
 
-In the tests a bad version (50% errors) was detected through Prometheus metrics and rolled back automatically. Only 1 of 5 pods ran the bad version, and the stable ReplicaSet was never replaced.
+### Step 6: Allow Jenkins to Use Docker
+Run on the Manager so the Jenkins user can access the Docker daemon:
 
-Evidence: `docs/screenshots` and `docs/evidence`.
+```bash
+chmod 777 /var/run/docker.sock
+systemctl daemon-reload
+systemctl restart docker.service
+```
+
+![Docker socket permission](images/05-docker-sock-permission.png)
+
+> âš ï¸ `chmod 777` is fine for a demo/lab. In production add the `jenkins` user to the `docker` group instead.
+
+### Step 7: Create the Jenkins Pipeline
+1. New Item â†’ **Pipeline** â†’ name it `docker project`.
+2. Tick **This project is parameterized** and add two *Choice parameters*:
+
+| Parameter | Choices |
+|-----------|---------|
+| `image` | `internetbanking:v1`, `mobilebanking:v1`, `insurance:v1`, `loans:v1` |
+| `repo` | `<dockerhub-user>/ib-image`, `<dockerhub-user>/mb-image`, `<dockerhub-user>/insurance-image`, `<dockerhub-user>/loans-image` |
+
+3. Store the Docker Hub password securely (Jenkins Credentials, or `Manage Jenkins â†’ System â†’ Environment variables`).
+
+Pipeline script:
+
+```groovy
+pipeline {
+    agent any
+
+    stages {
+        stage('checkout') {
+            steps {
+                git 'https://github.com/damashekar0/dockerproject.git'
+            }
+        }
+        stage('build') {
+            steps {
+                sh 'docker build -t $image .'
+            }
+        }
+        stage('tag') {
+            steps {
+                sh 'docker tag $image $repo'
+            }
+        }
+        stage('push') {
+            steps {
+                sh 'docker login -u <dockerhub-user> -p $password'
+                sh 'docker push $repo'
+            }
+        }
+        stage('deploy') {
+            steps {
+                sh 'docker stack deploy bank -c docker-compose.yml'
+            }
+        }
+    }
+}
+```
+
+![Jenkins pipeline script](images/06-jenkins-pipeline-script.png)
+
+### Step 8: Run the Build and Push to Docker Hub
+Click **Build with Parameters**, pick an `image` and its matching `repo`. A successful run logs in to Docker Hub, pushes the image and ends with `Finished: SUCCESS`.
+
+![Jenkins build success](images/07-jenkins-build-success.png)
+
+Repeat for each application (change `index.html` in GitHub â†’ build with the next image/repo pair) so that all 4 images exist in Docker Hub.
+
+### Step 9: Deploy with Docker Stack
+`docker-compose.yml` runs each app with **3 replicas** spread across the swarm nodes:
+
+```yaml
+version: '3.8'
+services:
+  internetbanking:
+    image: <dockerhub-user>/ib-image:latest
+    ports:
+      - "8081:80"
+    deploy:
+      replicas: 3
+  mobilebanking:
+    image: <dockerhub-user>/mb-image:latest
+    ports:
+      - "8082:80"
+    deploy:
+      replicas: 3
+  insurance:
+    image: <dockerhub-user>/insurance-image:latest
+    ports:
+      - "8083:80"
+    deploy:
+      replicas: 3
+  loan:
+    image: <dockerhub-user>/loans-image:latest
+    ports:
+      - "8084:80"
+    deploy:
+      replicas: 3
+```
+
+Useful commands on the Manager:
+
+```bash
+docker stack ls
+docker stack services bank
+docker stack ps bank
+docker service ls
+```
+
+### Step 10: Access the Application
+Open `http://<ANY_NODE_PUBLIC_IP>:8081` â€“ the Swarm routing mesh serves the app from any node.
+
+![Application home page](images/08-app-home-page.png)
+
+![Application login popup](images/09-app-login-popup.png)
+
+---
+
+## âœ… Key Learnings
+- Building a multi-node Docker Swarm cluster on AWS
+- Parameterized Jenkins pipelines (one pipeline, many images)
+- Image tagging and pushing to Docker Hub
+- High availability with replicated services using `docker stack deploy`
+
+## ðŸ” Security Notes
+- Never hard-code the Docker Hub password; use **Jenkins Credentials**.
+- Do not commit Swarm join tokens or public IPs.
+- Avoid `chmod 777 /var/run/docker.sock` in production.
+
+## ðŸ”® Future Improvements
+- GitHub webhook / SCM polling trigger
+- Use Jenkins Credentials binding instead of plain-text password
+- Add Docker Swarm visualizer and monitoring (Prometheus + Grafana)
+- Image versioning with build numbers instead of `latest`
+
+## ðŸ‘¤ Author
+**Shekar** â€“ DevOps Learner
+
 ## Note on the pipeline
 The GitHub Actions workflow was verified green (run 8, screenshot 12). After the project, the AWS resources were removed to avoid cost, so the workflow is set to manual trigger only.
+
 
